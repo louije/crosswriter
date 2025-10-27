@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cross Stitch Pattern Generator</title>
+    <script src="https://cdn.jsdelivr.net/npm/opentype.js@1.3.4/dist/opentype.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: white;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .header-title {
+            flex: 1;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin: 0;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 13px;
+            margin: 5px 0 0 0;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .content {
+            display: grid;
+            grid-template-columns: 350px 1fr 400px;
+            gap: 0;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .controls {
+            background: #f8f9fa;
+            padding: 20px;
+            border-right: 1px solid #dee2e6;
+            overflow-y: auto;
+            height: 100%;
+        }
+
+        .char-controls-pane {
+            background: #f8f9fa;
+            padding: 20px;
+            border-left: 1px solid #dee2e6;
+            overflow-y: auto;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .preview {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            overflow-y: auto;
+            height: 100%;
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .control-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #2d3748;
+            font-size: 14px;
+        }
+        
+        .control-group input[type="text"],
+        .control-group input[type="number"],
+        .control-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .control-group input:focus,
+        .control-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .file-upload {
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+        }
+        
+        .file-upload:hover {
+            border-color: #667eea;
+            background: #f7fafc;
+        }
+        
+        .file-upload input {
+            display: none;
+        }
+        
+        .file-upload-label {
+            cursor: pointer;
+            color: #4a5568;
+        }
+        
+        .font-list {
+            margin-top: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        .font-item {
+            padding: 8px;
+            margin: 4px 0;
+            background: #edf2f7;
+            border-radius: 4px;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .font-item button {
+            background: #e53e3e;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        
+        .btn-header {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-header.primary {
+            background: white;
+            color: #1e3c72;
+        }
+
+        .btn-header.primary:hover {
+            background: #f0f0f0;
+            transform: translateY(-1px);
+        }
+
+        .btn-header.secondary {
+            background: rgba(255, 255, 255, 0.8);
+            color: #1e3c72;
+        }
+
+        .btn-header.secondary:hover {
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .btn-header.tertiary {
+            background: transparent;
+            color: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-header.tertiary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.9);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .pattern-canvas {
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 100%;
+        }
+        
+        .stats {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f7fafc;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .stat-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2d3748;
+        }
+        
+        .divider {
+            height: 1px;
+            background: #e2e8f0;
+            margin: 15px 0;
+        }
+        
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #667eea;
+            flex-shrink: 0;
+        }
+        
+        .line-controls {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .line-header {
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 10px;
+            font-size: 15px;
+        }
+
+        .char-controls {
+            background: #f7fafc;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .char-header {
+            font-weight: 600;
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: #2d3748;
+            font-family: monospace;
+        }
+
+        .char-slider-group {
+            display: grid;
+            grid-template-columns: 30px 1fr 55px;
+            gap: 8px;
+            align-items: center;
+            margin: 5px 0;
+        }
+
+        .char-slider-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .char-slider-group input[type="range"] {
+            width: 100%;
+        }
+
+        .char-slider-group input[type="number"] {
+            width: 55px;
+            padding: 6px;
+            font-size: 13px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .char-list {
+            flex: 1;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        .btn-small:hover {
+            background: #5a67d8;
+        }
+
+        .line-item {
+            padding: 12px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 6px;
+            border: 2px solid #e2e8f0;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .line-item:hover {
+            border-color: #667eea;
+            background: #f7fafc;
+        }
+
+        .line-item.active {
+            border-color: #667eea;
+            background: #edf2f7;
+            font-weight: 600;
+        }
+
+        .line-item-text {
+            flex: 1;
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .line-item button {
+            background: #e53e3e;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            margin-left: 8px;
+        }
+
+        .line-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .error-message {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+        
+        .success-message {
+            background: #c6f6d5;
+            color: #22543d;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+        
+        @media (max-width: 1400px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+
+            .controls, .char-controls-pane {
+                max-height: none;
+                border-right: none;
+                border-left: none;
+                border-bottom: 1px solid #dee2e6;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-title">
+                <h1>🧵 Cross Stitch Pattern Generator</h1>
+                <p>Upload fonts and create custom patterns with sub-pixel control</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn-header tertiary" onclick="resetAll()">Reset All</button>
+                <button class="btn-header secondary" onclick="downloadPattern()">Download PNG</button>
+                <button class="btn-header primary" onclick="generatePattern()">Generate Pattern</button>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="controls">
+                <div class="control-group">
+                    <label>📁 Upload Fonts (.ttf, .otf)</label>
+                    <div class="file-upload" onclick="document.getElementById('fontUpload').click()">
+                        <input type="file" id="fontUpload" accept=".ttf,.otf" multiple>
+                        <div class="file-upload-label">
+                            Click to upload or drag & drop<br>
+                            <small style="color: #a0aec0;">TrueType (.ttf) or OpenType (.otf)</small>
+                        </div>
+                    </div>
+                    <div class="font-list" id="fontList"></div>
+                </div>
+                
+                <div class="divider"></div>
+                
+                <div class="section-title">Pattern Settings</div>
+                
+                <div class="control-group">
+                    <label>Pattern Width (stitches)</label>
+                    <input type="number" id="patternWidth" value="115" min="50" max="300">
+                </div>
+                
+                <div class="control-group">
+                    <label>Pattern Height (stitches)</label>
+                    <input type="number" id="patternHeight" value="50" min="30" max="200">
+                </div>
+                
+                <div class="divider"></div>
+
+                <div class="section-title">Text Lines</div>
+
+                <div class="line-list" id="lineList"></div>
+
+                <button class="btn-small" onclick="addNewLine()">+ Add New Line</button>
+
+                <div class="divider"></div>
+
+                <div class="section-title">Line Settings</div>
+
+                <div id="lineSettings">
+                    <p style="color: #718096; font-size: 13px; text-align: center; padding: 20px;">
+                        Select or add a line to edit
+                    </p>
+                </div>
+
+                <div id="message"></div>
+            </div>
+            
+            <div class="preview">
+                <canvas id="patternCanvas" class="pattern-canvas"></canvas>
+
+                <div class="stats">
+                    <h3 style="color: #2d3748; margin-bottom: 10px;">Pattern Statistics</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">Total Stitches</div>
+                            <div class="stat-value" id="totalStitches">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Dimensions</div>
+                            <div class="stat-value" style="font-size: 16px;" id="dimensions">115×50</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">14-Count Aida</div>
+                            <div class="stat-value" style="font-size: 16px;" id="fabricSize">8.2"×3.6"</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Grid Lines</div>
+                            <div class="stat-value" style="font-size: 16px;">Every 10</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="char-controls-pane">
+                <div class="section-title">Character Controls</div>
+                <div id="charList" class="char-list">
+                    <p style="color: #718096; font-size: 13px; text-align: center; padding: 20px;">
+                        Parse a line to see character controls
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const fonts = {};
+        let pattern = null;
+        let lines = []; // Array of line objects
+        let selectedLineIndex = null;
+        let db = null; // IndexedDB for font storage
+
+        // Initialize IndexedDB for font persistence
+        function initDB() {
+            const request = indexedDB.open('CrossStitchDB', 1);
+
+            request.onerror = () => {
+                console.error('Database failed to open');
+            };
+
+            request.onsuccess = () => {
+                db = request.result;
+                loadFromStorage();
+            };
+
+            request.onupgradeneeded = (e) => {
+                db = e.target.result;
+                if (!db.objectStoreNames.contains('fonts')) {
+                    db.createObjectStore('fonts', { keyPath: 'name' });
+                }
+            };
+        }
+
+        // Save font to IndexedDB
+        function saveFontToDB(fontName, arrayBuffer) {
+            if (!db) return;
+
+            const transaction = db.transaction(['fonts'], 'readwrite');
+            const objectStore = transaction.objectStore('fonts');
+            objectStore.put({ name: fontName, data: arrayBuffer });
+        }
+
+        // Load fonts from IndexedDB
+        function loadFontsFromDB() {
+            if (!db) return Promise.resolve();
+
+            return new Promise((resolve) => {
+                const transaction = db.transaction(['fonts'], 'readonly');
+                const objectStore = transaction.objectStore('fonts');
+                const request = objectStore.getAll();
+
+                request.onsuccess = async () => {
+                    const fontRecords = request.result;
+                    for (const record of fontRecords) {
+                        try {
+                            const font = opentype.parse(record.data);
+                            fonts[record.name] = font;
+
+                            // Add to font list UI
+                            const fontList = document.getElementById('fontList');
+                            const fontItem = document.createElement('div');
+                            fontItem.className = 'font-item';
+                            fontItem.innerHTML = `
+                                <span>${record.name}</span>
+                                <button onclick="removeFont('${record.name}')">Remove</button>
+                            `;
+                            fontList.appendChild(fontItem);
+                        } catch (err) {
+                            console.error(`Error loading font ${record.name}:`, err);
+                        }
+                    }
+                    resolve();
+                };
+
+                request.onerror = () => resolve();
+            });
+        }
+
+        // Save settings to localStorage
+        function saveToStorage() {
+            const state = {
+                lines: lines,
+                selectedLineIndex: selectedLineIndex,
+                patternWidth: document.getElementById('patternWidth').value,
+                patternHeight: document.getElementById('patternHeight').value
+            };
+            localStorage.setItem('crossStitchState', JSON.stringify(state));
+        }
+
+        // Load settings from localStorage
+        async function loadFromStorage() {
+            // Load fonts first
+            await loadFontsFromDB();
+
+            // Load settings
+            const saved = localStorage.getItem('crossStitchState');
+            if (saved) {
+                try {
+                    const state = JSON.parse(saved);
+                    lines = state.lines || [];
+                    selectedLineIndex = state.selectedLineIndex;
+
+                    if (state.patternWidth) {
+                        document.getElementById('patternWidth').value = state.patternWidth;
+                    }
+                    if (state.patternHeight) {
+                        document.getElementById('patternHeight').value = state.patternHeight;
+                    }
+
+                    renderLineList();
+                    if (selectedLineIndex !== null && lines[selectedLineIndex]) {
+                        renderLineSettings();
+                        renderCharacterControls();
+                    }
+
+                    // Auto-generate if we have lines with characters
+                    if (lines.some(l => l.characters && l.characters.length > 0)) {
+                        setTimeout(() => generatePattern(), 100);
+                    }
+
+                    showMessage('Previous session restored', 'success');
+                } catch (err) {
+                    console.error('Error loading saved state:', err);
+                }
+            }
+        }
+
+        // Reset all data
+        function resetAll() {
+            if (!confirm('Are you sure you want to reset everything? This will delete all fonts, lines, and settings.')) {
+                return;
+            }
+
+            // Clear IndexedDB
+            if (db) {
+                const transaction = db.transaction(['fonts'], 'readwrite');
+                const objectStore = transaction.objectStore('fonts');
+                objectStore.clear();
+            }
+
+            // Clear localStorage
+            localStorage.removeItem('crossStitchState');
+
+            // Clear memory
+            Object.keys(fonts).forEach(key => delete fonts[key]);
+            lines = [];
+            selectedLineIndex = null;
+            pattern = null;
+
+            // Clear UI
+            document.getElementById('fontList').innerHTML = '';
+            renderLineList();
+            document.getElementById('lineSettings').innerHTML = '<p style="color: #718096; font-size: 13px; text-align: center; padding: 20px;">Select or add a line to edit</p>';
+            document.getElementById('charList').innerHTML = '<p style="color: #718096; font-size: 13px; text-align: center; padding: 20px;">Parse a line to see character controls</p>';
+
+            // Clear canvas
+            const canvas = document.getElementById('patternCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            showMessage('All data reset', 'success');
+        }
+        
+        // Handle font upload
+        document.getElementById('fontUpload').addEventListener('change', async (e) => {
+            const files = e.target.files;
+            const fontList = document.getElementById('fontList');
+
+            for (let file of files) {
+                const fontName = file.name.replace(/\.(ttf|otf)$/i, '');
+                const arrayBuffer = await file.arrayBuffer();
+
+                try {
+                    const font = opentype.parse(arrayBuffer);
+                    fonts[fontName] = font;
+
+                    // Save to IndexedDB
+                    saveFontToDB(fontName, arrayBuffer);
+
+                    // Add to font list
+                    const fontItem = document.createElement('div');
+                    fontItem.className = 'font-item';
+                    fontItem.innerHTML = `
+                        <span>${fontName}</span>
+                        <button onclick="removeFont('${fontName}')">Remove</button>
+                    `;
+                    fontList.appendChild(fontItem);
+
+                    // Add to dropdowns
+                    updateFontDropdowns();
+
+                    showMessage(`Font "${fontName}" loaded successfully!`, 'success');
+                } catch (err) {
+                    showMessage(`Error loading font "${fontName}": ${err.message}`, 'error');
+                }
+            }
+        });
+        
+        function removeFont(fontName) {
+            delete fonts[fontName];
+
+            // Remove from IndexedDB
+            if (db) {
+                const transaction = db.transaction(['fonts'], 'readwrite');
+                const objectStore = transaction.objectStore('fonts');
+                objectStore.delete(fontName);
+            }
+
+            updateFontDropdowns();
+
+            // Remove from list
+            const fontList = document.getElementById('fontList');
+            const items = fontList.getElementsByClassName('font-item');
+            for (let item of items) {
+                if (item.textContent.includes(fontName)) {
+                    item.remove();
+                    break;
+                }
+            }
+
+            showMessage(`Font "${fontName}" removed`, 'success');
+        }
+        
+        function updateFontDropdowns() {
+            // This will be used in line settings
+        }
+
+        function addNewLine() {
+            const height = parseInt(document.getElementById('patternHeight').value);
+            const lineCount = lines.length;
+
+            // Default Y positions: space lines evenly like before (20%, 50%, 80%)
+            let defaultY;
+            if (lineCount === 0) defaultY = Math.floor(height * 0.2);
+            else if (lineCount === 1) defaultY = Math.floor(height * 0.5);
+            else if (lineCount === 2) defaultY = Math.floor(height * 0.8);
+            else defaultY = Math.floor(height * 0.5); // Additional lines default to middle
+
+            const newLine = {
+                text: '',
+                fontName: Object.keys(fonts)[0] || '',
+                fontSize: 16,
+                baseY: defaultY,
+                characters: []
+            };
+            lines.push(newLine);
+            renderLineList();
+            selectLine(lines.length - 1);
+            saveToStorage();
+            showMessage('New line added', 'success');
+        }
+
+        function selectLine(index) {
+            selectedLineIndex = index;
+            renderLineList();
+            renderLineSettings();
+            renderCharacterControls();
+            saveToStorage();
+        }
+
+        function removeLine(index) {
+            lines.splice(index, 1);
+            if (selectedLineIndex >= lines.length) {
+                selectedLineIndex = lines.length - 1;
+            }
+            if (selectedLineIndex < 0) selectedLineIndex = null;
+            renderLineList();
+            if (selectedLineIndex !== null) {
+                renderLineSettings();
+                renderCharacterControls();
+            } else {
+                document.getElementById('lineSettings').innerHTML = '<p style="color: #718096; font-size: 13px; text-align: center; padding: 20px;">Select or add a line to edit</p>';
+                document.getElementById('charList').innerHTML = '<p style="color: #718096; font-size: 13px; text-align: center; padding: 20px;">Parse a line to see character controls</p>';
+            }
+            saveToStorage();
+            showMessage('Line removed', 'success');
+        }
+
+        function renderLineList() {
+            const lineList = document.getElementById('lineList');
+            lineList.innerHTML = '';
+
+            lines.forEach((line, idx) => {
+                const lineDiv = document.createElement('div');
+                lineDiv.className = 'line-item' + (idx === selectedLineIndex ? ' active' : '');
+                lineDiv.onclick = () => selectLine(idx);
+                lineDiv.innerHTML = `
+                    <div class="line-item-text">
+                        Line ${idx + 1}: ${line.text || '(empty)'} - ${line.fontName || 'no font'} ${line.fontSize}px
+                    </div>
+                    <button onclick="event.stopPropagation(); removeLine(${idx})">✕</button>
+                `;
+                lineList.appendChild(lineDiv);
+            });
+        }
+
+        function renderLineSettings() {
+            if (selectedLineIndex === null) return;
+
+            const line = lines[selectedLineIndex];
+            const settingsDiv = document.getElementById('lineSettings');
+
+            settingsDiv.innerHTML = `
+                <div class="control-group">
+                    <label>Text</label>
+                    <input type="text" id="lineText" value="${line.text}" oninput="updateLineProperty('text', this.value); parseTextToCharacters(true);" placeholder="Enter text...">
+                </div>
+
+                <div class="control-group">
+                    <label>Font</label>
+                    <select id="lineFont" onchange="updateLineProperty('fontName', this.value); parseTextToCharacters(true);">
+                        <option value="">Select font...</option>
+                        ${Object.keys(fonts).map(fontName =>
+                            `<option value="${fontName}" ${line.fontName === fontName ? 'selected' : ''}>${fontName}</option>`
+                        ).join('')}
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label>Base Font Size</label>
+                    <input type="number" id="lineFontSize" value="${line.fontSize}" oninput="updateLineProperty('fontSize', parseInt(this.value)); parseTextToCharacters(true);" min="8" max="48">
+                </div>
+
+                <div class="control-group">
+                    <label>Base Y Position (pixels)</label>
+                    <input type="number" id="lineBaseY" value="${line.baseY}" oninput="updateLineProperty('baseY', parseInt(this.value)); generatePattern();" min="0" max="200">
+                </div>
+
+                <button class="btn-small" onclick="parseTextToCharacters()">Re-parse & Re-center</button>
+            `;
+        }
+
+        function updateLineProperty(property, value) {
+            if (selectedLineIndex === null) return;
+            lines[selectedLineIndex][property] = value;
+            renderLineList();
+            saveToStorage();
+        }
+
+        function parseTextToCharacters(autoRegenerate = false) {
+            if (selectedLineIndex === null) {
+                if (!autoRegenerate) showMessage('Please select a line first', 'error');
+                return;
+            }
+
+            const line = lines[selectedLineIndex];
+
+            if (!line.text) {
+                line.characters = [];
+                renderCharacterControls();
+                return;
+            }
+
+            if (!line.fontName || !fonts[line.fontName]) {
+                if (!autoRegenerate) showMessage('Please select a font', 'error');
+                return;
+            }
+
+            const font = fonts[line.fontName];
+            const width = parseInt(document.getElementById('patternWidth').value);
+
+            // Calculate total text width first
+            let totalWidth = 0;
+            const glyphs = [];
+            for (let i = 0; i < line.text.length; i++) {
+                const char = line.text[i];
+                const glyph = font.charToGlyph(char);
+                const advance = glyph.advanceWidth * line.fontSize / font.unitsPerEm;
+                glyphs.push({ char, advance });
+                totalWidth += advance;
+            }
+
+            // Center the text
+            let cursorX = (width - totalWidth) / 2;
+            line.characters = [];
+
+            glyphs.forEach((glyphData, i) => {
+                line.characters.push({
+                    char: glyphData.char,
+                    offsetX: cursorX,
+                    offsetY: 0,
+                    scale: 1.0,
+                    index: i
+                });
+                cursorX += glyphData.advance;
+            });
+
+            renderCharacterControls();
+            if (!autoRegenerate) {
+                showMessage(`Parsed ${line.characters.length} characters`, 'success');
+            }
+
+            saveToStorage();
+
+            // Auto-regenerate if we have at least one line with characters
+            if (lines.some(l => l.characters && l.characters.length > 0)) {
+                generatePattern();
+            }
+        }
+
+        function renderCharacterControls() {
+            const charList = document.getElementById('charList');
+
+            if (selectedLineIndex === null || !lines[selectedLineIndex].characters.length) {
+                charList.innerHTML = '<p style="color: #718096; font-size: 13px; text-align: center; padding: 20px;">Parse a line to see character controls</p>';
+                return;
+            }
+
+            const characters = lines[selectedLineIndex].characters;
+            charList.innerHTML = '';
+
+            characters.forEach((charData, idx) => {
+                const charDiv = document.createElement('div');
+                charDiv.className = 'char-controls';
+                charDiv.innerHTML = `
+                    <div class="char-header">"${charData.char === ' ' ? '␣' : charData.char}" (#${idx})</div>
+
+                    <div class="char-slider-group">
+                        <label>X</label>
+                        <input type="range" min="0" max="300" step="0.01" value="${charData.offsetX}"
+                               oninput="updateCharOffset(${idx}, 'offsetX', this.value, true)">
+                        <input type="number" step="0.01" value="${charData.offsetX.toFixed(2)}"
+                               onchange="updateCharOffset(${idx}, 'offsetX', this.value, true)"
+                               onkeydown="handleNumberKeydown(event, ${idx}, 'offsetX')">
+                    </div>
+
+                    <div class="char-slider-group">
+                        <label>Y</label>
+                        <input type="range" min="-30" max="30" step="0.01" value="${charData.offsetY}"
+                               oninput="updateCharOffset(${idx}, 'offsetY', this.value, true)">
+                        <input type="number" step="0.01" value="${charData.offsetY.toFixed(2)}"
+                               onchange="updateCharOffset(${idx}, 'offsetY', this.value, true)"
+                               onkeydown="handleNumberKeydown(event, ${idx}, 'offsetY')">
+                    </div>
+
+                    <div class="char-slider-group">
+                        <label>Scale</label>
+                        <input type="range" min="0.5" max="2.0" step="0.01" value="${charData.scale}"
+                               oninput="updateCharOffset(${idx}, 'scale', this.value, true)">
+                        <input type="number" step="0.01" value="${charData.scale.toFixed(2)}"
+                               onchange="updateCharOffset(${idx}, 'scale', this.value, true)"
+                               onkeydown="handleNumberKeydown(event, ${idx}, 'scale')">
+                    </div>
+                `;
+                charList.appendChild(charDiv);
+            });
+        }
+
+        function handleNumberKeydown(event, idx, property) {
+            if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+                if (event.shiftKey) {
+                    event.preventDefault();
+
+                    const currentValue = parseFloat(lines[selectedLineIndex].characters[idx][property]);
+                    const increment = event.key === 'ArrowUp' ? 1 : -1;
+                    const newValue = currentValue + increment;
+
+                    updateCharOffset(idx, property, newValue, true);
+                }
+            }
+        }
+
+        function updateCharOffset(idx, property, value, liveRegenerate = false) {
+            if (selectedLineIndex === null) return;
+
+            lines[selectedLineIndex].characters[idx][property] = parseFloat(value);
+
+            // Update both slider and number input
+            const charDiv = document.getElementById('charList').children[idx];
+            const inputs = charDiv.querySelectorAll(`input`);
+
+            if (property === 'offsetX') {
+                inputs[0].value = value;
+                inputs[1].value = parseFloat(value).toFixed(2);
+            } else if (property === 'offsetY') {
+                inputs[2].value = value;
+                inputs[3].value = parseFloat(value).toFixed(2);
+            } else if (property === 'scale') {
+                inputs[4].value = value;
+                inputs[5].value = parseFloat(value).toFixed(2);
+            }
+
+            // Live regeneration
+            if (liveRegenerate) {
+                generatePattern();
+            }
+
+            saveToStorage();
+        }
+        
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
+            messageDiv.textContent = text;
+            
+            setTimeout(() => {
+                messageDiv.textContent = '';
+                messageDiv.className = '';
+            }, 4000);
+        }
+        
+        function generatePattern() {
+            try {
+                if (lines.length === 0) {
+                    showMessage('Please add at least one line', 'error');
+                    return;
+                }
+
+                const width = parseInt(document.getElementById('patternWidth').value);
+                const height = parseInt(document.getElementById('patternHeight').value);
+
+                // Render at 8x resolution for consistent hinting, then downsample
+                const scale = 8;
+                const hiresWidth = width * scale;
+                const hiresHeight = height * scale;
+
+                // Create high-resolution temporary canvas
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = hiresWidth;
+                tempCanvas.height = hiresHeight;
+                const tempCtx = tempCanvas.getContext('2d');
+
+                // Fill white background
+                tempCtx.fillStyle = 'white';
+                tempCtx.fillRect(0, 0, hiresWidth, hiresHeight);
+                tempCtx.fillStyle = 'black';
+
+                // Render each line
+                lines.forEach(line => {
+                    if (!line.characters || line.characters.length === 0) return;
+                    if (!fonts[line.fontName]) return;
+
+                    const font = fonts[line.fontName];
+
+                    // Render each character individually with its custom offset and scale
+                    line.characters.forEach(charData => {
+                        if (!charData.char) return;
+
+                        // Calculate actual size with per-character scale
+                        const actualSize = line.fontSize * charData.scale * scale;
+
+                        // Calculate position with per-character offsets (SUB-PIXEL precision!)
+                        const x = charData.offsetX * scale;
+                        const y = (line.baseY + charData.offsetY) * scale;
+
+                        // Get the glyph path
+                        const path = font.getPath(charData.char, x, y, actualSize);
+                        path.fill = 'black';
+                        path.draw(tempCtx);
+                    });
+                });
+
+                // Downsample to target resolution using pixel averaging
+                const imageData = tempCtx.getImageData(0, 0, hiresWidth, hiresHeight);
+                pattern = new Array(height).fill(0).map(() => new Array(width).fill(0));
+                let stitchCount = 0;
+
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        // Average all pixels in the scale×scale block
+                        let sum = 0;
+                        for (let dy = 0; dy < scale; dy++) {
+                            for (let dx = 0; dx < scale; dx++) {
+                                const hiX = x * scale + dx;
+                                const hiY = y * scale + dy;
+                                const idx = (hiY * hiresWidth + hiX) * 4;
+                                const brightness = (imageData.data[idx] + imageData.data[idx + 1] + imageData.data[idx + 2]) / 3;
+                                sum += brightness;
+                            }
+                        }
+                        const avgBrightness = sum / (scale * scale);
+
+                        // Use threshold on averaged brightness
+                        if (avgBrightness < 200) {
+                            pattern[y][x] = 1;
+                            stitchCount++;
+                        }
+                    }
+                }
+                
+                // Draw pattern with grid
+                drawPattern(width, height);
+                
+                // Update stats
+                document.getElementById('totalStitches').textContent = stitchCount.toLocaleString();
+                document.getElementById('dimensions').textContent = `${width}×${height}`;
+                const inchW = (width / 14).toFixed(1);
+                const inchH = (height / 14).toFixed(1);
+                document.getElementById('fabricSize').textContent = `${inchW}"×${inchH}"`;
+                
+                showMessage('Pattern generated successfully!', 'success');
+            } catch (err) {
+                showMessage(`Error generating pattern: ${err.message}`, 'error');
+            }
+        }
+        
+        function drawPattern(width, height) {
+            const canvas = document.getElementById('patternCanvas');
+            const cellSize = 8;
+            canvas.width = width * cellSize;
+            canvas.height = height * cellSize;
+            const ctx = canvas.getContext('2d');
+            
+            // Draw white background
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw pattern
+            ctx.fillStyle = 'black';
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    if (pattern[y][x] === 1) {
+                        ctx.fillRect(x * cellSize, y * cellSize, cellSize - 1, cellSize - 1);
+                    }
+                }
+            }
+            
+            // Draw grid
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1;
+            
+            // Light grid lines
+            for (let i = 0; i <= height; i++) {
+                ctx.strokeStyle = i % 10 === 0 ? '#999' : '#e0e0e0';
+                ctx.lineWidth = i % 10 === 0 ? 2 : 1;
+                ctx.beginPath();
+                ctx.moveTo(0, i * cellSize);
+                ctx.lineTo(width * cellSize, i * cellSize);
+                ctx.stroke();
+            }
+            
+            for (let i = 0; i <= width; i++) {
+                ctx.strokeStyle = i % 10 === 0 ? '#999' : '#e0e0e0';
+                ctx.lineWidth = i % 10 === 0 ? 2 : 1;
+                ctx.beginPath();
+                ctx.moveTo(i * cellSize, 0);
+                ctx.lineTo(i * cellSize, height * cellSize);
+                ctx.stroke();
+            }
+        }
+        
+        function downloadPattern() {
+            if (!pattern) {
+                showMessage('Please generate a pattern first!', 'error');
+                return;
+            }
+            
+            const canvas = document.getElementById('patternCanvas');
+            const link = document.createElement('a');
+            link.download = 'cross_stitch_pattern.png';
+            link.href = canvas.toDataURL();
+            link.click();
+            
+            showMessage('Pattern downloaded!', 'success');
+        }
+        
+        // Initialize
+        initDB();
+    </script>
+</body>
+</html>
